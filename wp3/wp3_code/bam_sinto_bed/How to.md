@@ -32,19 +32,6 @@ Run the corresponding job script for your VM.
 bash /home/stud6/wp3/wp3_code/bam_sinto_bed/twoVMs/bam_sinto_bed_vm2.sh
 ```
 
-
-
-
-
-Steps to do so:
-    0. Obtain the env file from the GitRepo and save on VM.
-    1.  Create the conda env
-        >conda env create -f environment.yml
-    2. activate the env
-        >conda activate wp3
-    3. call the jobscript
-        >bash /home/stud6/wp3/wp3_code/bam_sinto_bed/twoVMs/bam_sinto_bed_vm2.sh
-
 ### Troubleshooting
 In case the code breaks, most errors will be written into the error files located in the error directory.
 
