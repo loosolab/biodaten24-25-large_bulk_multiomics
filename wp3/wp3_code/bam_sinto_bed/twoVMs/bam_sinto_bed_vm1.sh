@@ -72,33 +72,39 @@ add_barcodes() {
     if [ ! -s "$BAM_FILE" ]; then
         echo "Error: $BAM_FILE is empty or missing." >> "$ERROR_LOG"
         return 1
-    fi
-
-    
-    # Create index file in OUTPUT_BAM_BC folder
-    if [ ! -f "${OUTPUT_BAM_BC}/${BASE_NAME}.bai" ]; then
-      echo "Indexing $BAM_FILE..."
-      STEP_START=$SECONDS
-      if ! samtools index --threads "$MAX_PROCS_PER_FILE" "$BAM_FILE" "${OUTPUT_BAM_BC}/${BASE_NAME}.bai"; then
-        echo "Error: Failed to index $BAM_FILE." >> "$ERROR_LOG"
-        return 1
-      fi
-    fi
-        
+    fi      
     
     # Add cell barcodesS
-    echo "Adding barcode to $BAM_FILE..."
-    STEP_START=$SECONDS
     OUTFILE="${OUTPUT_BAM_BC}/${BASE_NAME}.cb.bam"
-    if ! python "/home/stud6/wp3/wp3_code/bam_sinto_bed/add_barcode.py" "$BAM_FILE" "$CELL_BARCODE" "$OUTFILE"; then
-        echo "Error: Failed to add barcode to $BAM_FILE." >> "$ERROR_LOG"
-    fi
-    echo "Barcode added in $((SECONDS - STEP_START)) seconds."
-
-    echo "Removing index file: ${OUTPUT_BAM_BC}/${BASE_NAME}.bai"
     
-    # Remove the index file because we need a new one to add fragments with the barcode column
-    rm -f "${OUTPUT_BAM_BC}/${BASE_NAME}.bai"
+    # Check if BAM_FILE exists
+    if [ ! -s "$OUTFILE" ]; then
+    
+      echo "Adding barcode to $BAM_FILE..."
+    
+      # Create index file in OUTPUT_BAM_BC folder
+      if [ ! -f "${OUTPUT_BAM_BC}/${BASE_NAME}.bai" ]; then
+        echo "Indexing $BAM_FILE..."
+        STEP_START=$SECONDS
+        if ! samtools index --threads "$MAX_PROCS_PER_FILE" "$BAM_FILE" "${OUTPUT_BAM_BC}/${BASE_NAME}.bai"; then
+          echo "Error: Failed to index $BAM_FILE." >> "$ERROR_LOG"
+          return 1
+        fi
+      fi
+      
+      echo "Indexing completed in $((SECONDS - STEP_START_INDEX)) seconds."
+      STEP_START=$SECONDS
+    
+      if ! python "/home/stud6/wp3/wp3_code/bam_sinto_bed/add_barcode.py" "$BAM_FILE" "$CELL_BARCODE" "$OUTFILE"; then
+          echo "Error: Failed to add barcode to $BAM_FILE." >> "$ERROR_LOG"
+      fi
+      echo "Barcode added in $((SECONDS - STEP_START)) seconds."
+  
+      echo "Removing index file: ${OUTPUT_BAM_BC}/${BASE_NAME}.bai"
+      
+      # Remove the index file because we need a new one to add fragments with the barcode column
+      rm -f "${OUTPUT_BAM_BC}/${BASE_NAME}.bai"
+    fi
     
     
     #echo "MV bc.bam file to $BAM_FILE"
@@ -121,29 +127,30 @@ fragment_bam() {
     MAX_TN5_DISTANCE=1000   # Default of PeakQC
     MIN_MAPPING_QUALITY=30 # According to Jan
     
+    if [ ! -s "$FRAGMENTS_FILE" ]; then
     
-    # Files are sorted by coordinate 
-    if [ ! -f "${BAM_FILE}.bai" ]; then
-      echo "Indexing $BAM_FILE..."
-      STEP_START=$SECONDS
-      if ! samtools index --threads "$MAX_PROCS_PER_FILE" "$BAM_FILE"; then
-        echo "Error: Failed to index $BAM_FILE." >> "$ERROR_LOG"
-        return 1
+      # Files are sorted by coordinate 
+      if [ ! -f "${BAM_FILE}.bai" ]; then
+        echo "Indexing $BAM_FILE..."
+        STEP_START=$SECONDS
+        if ! samtools index --threads "$MAX_PROCS_PER_FILE" "$BAM_FILE"; then
+          echo "Error: Failed to index $BAM_FILE." >> "$ERROR_LOG"
+          return 1
+        fi
       fi
+          
+      
+      # Fragment file
+      echo "Creating fragment file..."
+      STEP_START=$SECONDS
+      if ! sinto fragments -b "$BAM_FILE" -f "$FRAGMENTS_FILE" -p "$MAX_PROCS_PER_FILE" --max_distance "$MAX_TN5_DISTANCE" --min_mapq "$MIN_MAPPING_QUALITY"; then
+          echo "Error: Failed to create fragment file for $BAM_FILE." >> "$ERROR_LOG"
+          return 1
+      fi
+          
+      # Remove the index file to save space on disk
+      rm -f "$BAM_FILE.bai"
     fi
-        
-    
-    # Fragment file
-    echo "Creating fragment file..."
-    STEP_START=$SECONDS
-    if ! sinto fragments -b "$BAM_FILE" -f "$FRAGMENTS_FILE" -p "$MAX_PROCS_PER_FILE" --max_distance "$MAX_TN5_DISTANCE" --min_mapq "$MIN_MAPPING_QUALITY"; then
-        echo "Error: Failed to create fragment file for $BAM_FILE." >> "$ERROR_LOG"
-        return 1
-    fi
-        
-    # Remove the index file to save space on disk
-    rm -f "$BAM_FILE.bai"
-
     
     echo "Processed $BAM_FILE in $((SECONDS - START_TIME)) seconds."
 }
