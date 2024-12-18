@@ -23,7 +23,7 @@ OUTPUT_FRAGMENT="/mnt/workspace_stud/stud6/atac/napkon_fragment"
 NUM_THREADS=$(nproc)
 
 # Path to parallel installtion
-parallel_p="/home/stud6/parallel-20241022/src/parallel"
+parallel_p="/mnt/workspace_stud/stud6/parallel-20241022/src/parallel"
 
 # Create output dir if not exists
 mkdir -p "$OUTPUT_BED"
