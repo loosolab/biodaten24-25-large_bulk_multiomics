@@ -2,17 +2,15 @@
 import os
 import pandas as pd
 import gseapy as gp
-
+from pathlib import Path
 class GSEA:
-
-
+    parent_dir = Path(__file__).parent
     def __init__(self, matrix_df, meta_df, clusters_df):
         self.matrix_df = matrix_df
         self.meta_df = meta_df
         self.clusters_df = clusters_df
-
     def gmt_maker(self):
-        output_gmt_path = os.path.abspath("GSEA/clusters.gmt")
+        output_gmt_path = os.path.join(self.parent_dir, "GSEA/clusters.gmt")
         with open(output_gmt_path, "w") as gmt:
             # symbol = "|"
             for index, row in self.clusters_df.iterrows():
@@ -27,7 +25,6 @@ class GSEA:
                 gmt.write(cluster + "\n")
         print(f"Gene sets saved to {output_gmt_path}")
         return output_gmt_path
-
     def prerank(self, output_gmt_path):
         meta_int_columns = []
         for column in self.meta_df.columns:

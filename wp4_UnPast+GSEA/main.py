@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import subprocess
+from pathlib import Path
 import os
 import pandas as pd
 import argparse
@@ -7,13 +7,14 @@ import argparse
 
 
 def main():
+    #Paths
+    parent_dir = Path(__file__).parent
     #ArgParser
     parser = argparse.ArgumentParser(description='Positional arguments: matrix path and meta path. Flags: -u for unpast, -p for preranked, -h for help.\n Usage:\b Unpast => python main.py [path/to/matrixfile.txt] path/to/metafile.txt -u [unpast/output/directory]\n Preranked => python main.py path/to/matrixfile.txt path/to/metafile.txt -p [path/to/clusterfile.txt]\n Both => python main.py [path/to/matrixfile.txt] [path/to/metafile.txt] -u [unpast/output/directory] [unpast_output_basename] -p [path/to/clusterfile.txt]')
     parser.add_argument("matrix", help='Path to the matrix file')
     parser.add_argument("meta", help='Path to the meta file Comes second after ')
     parser.add_argument("-u", nargs=2, type=str, help='Output directory and basename of the unpast output file. python main.py -u [unpast/output/directory] [unpast_output_basename] [path/to/matrixfile.txt] [path/to/metafile.txt]', default=None)
     parser.add_argument("-p", nargs=1, type=str, help='Path to the cluster file. python main.py -p [path/to/clusterfile.txt] [path/to/matrixfile.txt] [path/to/metafile.txt]', default=None,)
-    # parser.add("")
     args = parser.parse_args()
 
     if args.u == None and args.p != None:
@@ -26,7 +27,7 @@ def main():
         prerank_run = True
         unpast_run = True
     else:
-        print('Please select an analyse to run')
+        print('Please select at least one analyse to run')
     
 
     # Initial Input
@@ -36,9 +37,9 @@ def main():
     meta_df = pd.read_csv(meta_path, sep='\t', header=0, index_col=0, engine='python')
     matrix_df = pd.read_csv(matrix_path, sep='\t', header=0, index_col=0, engine='python')
     symbol = "|"
-    matrix_df.index = matrix_df.index.str.split(symbol, n=1).str[-1]
-    # print(matrix_df.head())
-    # print(meta_df.head())
+    matrix_df.index = matrix_df.index.str.split(symbol, n=1).str[-1]          # separating and removing ENS.... gene identifiers
+    print(matrix_df.head())
+    print(meta_df.head())
     
     # UnPast
     if unpast_run == True:
@@ -57,13 +58,15 @@ def main():
         unpast_outfile = unpast.run_unpast_docker(unpast_outdir, unpast_basename)
         unpast_outpath="/".join([unpast_outdir, unpast_outfile])
 
+    # Clusterfile DataFrame creation 
+    if unpast_run == True:
+        clusters_df = pd.read_csv(unpast_outpath, sep="\t", header=0, index_col=0)
+    else:
+        unpast_outpath = os.path.abspath(args.p[0])
+        clusters_df = pd.read_csv(unpast_outpath, sep="\t", header=0, index_col=0)
+    
     #Prerank
     if prerank_run == True:
-        if unpast_run == True:
-            clusters_df = pd.read_csv(unpast_outpath, sep="\t", header=0, index_col=0)
-        else:
-            unpast_outpath = os.path.abspath(args.p[0])
-            clusters_df = pd.read_csv(unpast_outpath, sep="\t", header=0, index_col=0)
         import GSEA as gs
         gsea = gs.GSEA(
             matrix_df=matrix_df,
