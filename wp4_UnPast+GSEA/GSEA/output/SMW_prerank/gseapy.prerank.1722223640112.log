@@ -1,0 +1,46 @@
+2025-01-26 22:55:15,628 prerank1722223640112::[WARNING ] Input gene rankings contains NA values(gene name and ranking value), drop them all!
+2025-01-26 22:55:15,632 prerank1722223640112::[DEBUG   ] NAs list:
+                    0   1
+0    healthy-6620-p_6 NaN
+1   healthy-6655-p_27 NaN
+2   healthy-6667-p_49 NaN
+4   healthy-6819-p_19 NaN
+5   healthy-6935-p_54 NaN
+7   healthy-6968-p_15 NaN
+10  healthy-6743-p_63 NaN
+11  healthy-6884-p_64 NaN
+13      pah-6637-p_41 NaN
+15      pah-6712-p_17 NaN
+16      pah-6803-p_50 NaN
+18       pah-6863-p_3 NaN
+24       pah-6744-p_2 NaN
+27       pah-6872-p_4 NaN
+29      pah-6904-p_25 NaN
+31  ph-lung-6689-p_29 NaN
+32  ph-lung-6747-p_46 NaN
+33  ph-lung-6912-p_65 NaN
+34  ph-lung-6649-p_33 NaN
+35  ph-lung-6662-p_55 NaN
+36  ph-lung-6678-p_42 NaN
+37  ph-lung-6748-p_43 NaN
+38  ph-lung-6749-p_57 NaN
+39  ph-lung-6754-p_20 NaN
+40   ph-lung-6755-p_1 NaN
+41  ph-lung-6822-p_18 NaN
+42  ph-lung-6825-p_52 NaN
+43  ph-lung-6885-p_58 NaN
+45  ph-lung-6932-p_21 NaN
+47  ph-lung-6952-p_36 NaN
+48  ph-lung-6976-p_12 NaN
+49  ph-lung-6980-p_26 NaN
+2025-01-26 22:55:15,636 prerank1722223640112::[WARNING ] Duplicated values found in preranked stats: 5.56% of genes
+The order of those genes will be arbitrary, which may produce unexpected results.
+2025-01-26 22:55:15,636 prerank1722223640112::[INFO    ] Parsing data files for GSEA.............................
+2025-01-26 22:55:15,638 prerank1722223640112::[INFO    ] 0141 gene_sets have been filtered out when max_size=500 and min_size=15
+2025-01-26 22:55:15,639 prerank1722223640112::[ERROR   ] No gene sets passed through filtering condition !!! 
+Hint 1: Try to lower min_size or increase max_size !
+Hint 2: Check gene symbols are identifiable to your gmt input.
+Hint 3: Gene symbols curated in Enrichr web services are all upcases.
+
+2025-01-26 22:55:15,640 prerank1722223640112::[ERROR   ] The first entry of your gene_sets (gmt) look like this : { cluster_0_UP: [healthy-6968-p_15, pah-6942-p_9, pah-6958-p_40, ph-lung-6980-p_26]}
+2025-01-26 22:55:15,641 prerank1722223640112::[ERROR   ] The first 5 genes look like this : [ pah-6634-p_28, healthy-6818-p_59, pah-6691-p_23, pah-6875-p_60, healthy-6960-p_32 ]
