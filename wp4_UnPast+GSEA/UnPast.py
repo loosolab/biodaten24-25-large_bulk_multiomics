@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import os
 import subprocess
+from pathlib import Path
 
 class UnPast:
-
+    parent_dir = Path(__file__).parent
     def __init__(self, matrix_df, matrix_path, meta_df, meta_path):
         self.matrix_df = matrix_df
         self.matrix_path = matrix_path
