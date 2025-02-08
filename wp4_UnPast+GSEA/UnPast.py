@@ -4,7 +4,11 @@ import subprocess
 from pathlib import Path
 
 class UnPast:
+    #path management
     parent_dir = Path(__file__).parent
+    os.makedirs(f"{parent_dir}/unpast/output", exist_ok=True)
+    unpast_outdir = os.path.abspath(f'{parent_dir}/unpast/output')
+
     def __init__(self, matrix_df, matrix_path, meta_df, meta_path):
         self.matrix_df = matrix_df
         self.matrix_path = matrix_path
@@ -12,25 +16,25 @@ class UnPast:
         self.meta_path = meta_path
 
 
-    def run_unpast_docker(self, outdir, basename):
+    def run_unpast_docker(self, basename):
         command = [
             "docker", "run",
             "-v", f"{os.getcwd}:/user_data",
             "freddsle/unpast:latest",
             "--exprs", self.matrix_path,
-            "--out_dir", outdir,
+            "--out_dir", self.unpast_outdir,
             "--basename", basename
         ]
         
         try:
             result = subprocess.run(command, check=True, text=True, capture_output=True)
             print(result.stdout)
-            unpast_outfile = UnPast.unpast_outreadfiles(outdir,basename)
+            unpast_outfile = UnPast.unpast_outreadfiles(self.unpast_outdir,basename)
             return unpast_outfile
         except subprocess.CalledProcessError as e:
             print(e.stderr)
 
-    def unpast_outreadfiles(self, directory, basename):
+    def unpast_outreadfiles(self, directory, basename): #lets to choose the right clusterfile if several clusterfiles in output folder (from prev test etc.)
         listdir = os.listdir(directory)
         hitfilelist = [filename for filename in listdir if basename in filename and ".biclusters." in filename]
         if len(hitfilelist) == 0:
