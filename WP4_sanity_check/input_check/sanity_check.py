@@ -3,12 +3,12 @@
 """
 This script performs a sanity check on a metadata file by detecting and marking outliers and invalid values.
 The script uses the following steps:
-1. Load the metadata file from **meta_data_source**.
+1. Load the metadata file from *meta_data_source*.
 2. Iterate over all attributes and check for outliers or invalid values.
-3. For categorical attributes, replace invalid values with "ERRSAN" (categorical attributes must be defined under **categorical_attributes** before execution).
-4. For binary attributes, replace invalid values with "ERRSAN" (binary attributes must be defined under **binary_attributes** before execution).
+3. For categorical attributes, replace invalid values with "ERRSAN" (categorical attributes must be defined under *categorical_attributes* before execution).
+4. For binary attributes, replace invalid values with "ERRSAN" (binary attributes must be defined under *binary_attributes* before execution).
 5. For numerical attributes, detect outliers using Isolation Forest and replace them with "ERRSAN" (all values that are not categorical or binary are considered numerical!). 
-6. Save the updated metadata file under **output_path**.
+6. Save the updated metadata file under *output_path*.
 
 Usage:
 Run the script with the appropriate paths to the metadata file and output file. The script will process the metadata and save the updated file with outliers and invalid values marked as "ERRSAN".
@@ -20,24 +20,27 @@ from sklearn.ensemble import IsolationForest
 
 # Path to the meta data as well as the output file and definition of the categorical and binary attributes
 meta_data_source = "/Users/moritz/Desktop/WP4_Moritz/test_data/unpast_1a_meta_filter.txt"
-output_path = "/Users/moritz/Desktop/WP4_Moritz/output/unpast_1a_meta_filter_sanity_check.txt"
+output_path = "/Users/moritz/Desktop/WP4_sanity_check/output/unpast_1a_meta_filter_sanity_check.txt"
 categorical_attributes = {"gender":["F", "M"], "condition": ["healthy","pah","ph-lung"]}
 binary_attributes = ["Paradoxe_Septumbewegung", "Perikarderguss"]
 
+# Definition of the outlier detection parameters
+determination_threshold = 4.4   # 4.4 is based on various testing and should be adjusted according to the data
+number_of_estimators = 1000     # Number of estimators for the Isolation Forest
 
 def outlier_detection(column: list) -> list:
     # Convert data to a NumPy array
-    height_array = np.array(column).reshape(-1, 1)
+    column_array = np.array(column).reshape(-1, 1)
 
     # Isolation Forest with automatic adjustment of anomaly detection
-    iforest = IsolationForest(n_estimators=1000, contamination='auto', random_state=42)
-    iforest.fit(height_array)
+    iforest = IsolationForest(n_estimators=number_of_estimators, contamination='auto', random_state=42)
+    iforest.fit(column_array)
 
     # Calculate score (the lower, the more likely an outlier)
-    scores = iforest.decision_function(height_array)
+    scores = iforest.decision_function(column_array)
 
-    # Adaptive threshold for outlier determination, 4.4 is based on various tests
-    threshold = np.mean(scores) - 4.4 * np.std(scores)
+    # Adaptive threshold for outlier determination
+    threshold = np.mean(scores) - determination_threshold * np.std(scores)
 
     # Mark as outlier
     outliers = (scores < threshold).astype(int)
