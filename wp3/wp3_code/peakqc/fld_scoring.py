@@ -14,6 +14,7 @@ from scipy.signal import fftconvolve
 from beartype.typing import Optional, Literal, SupportsFloat, Tuple
 from beartype import beartype
 import numpy.typing as npt
+from pathlib import Path
 
 import peakqc.insertsizes as insertsizes
 
@@ -426,6 +427,9 @@ def build_score_mask(plot: bool = False,
 
         if save:
             plt.savefig(save)
+            #plt.close(fig)
+        else:
+            plot.show()
 
         return gaussians, (fig, ax)
 
@@ -525,9 +529,12 @@ def cos_wavelet(wavelength: int = 100,
 
         if save:
             plt.savefig(save)
+            #plt.close(fig)
 
         # Optionally, to show the figure
-        plt.show()
+        
+        else:
+            plt.show()
 
         return wavelet, (fig, ax)
 
@@ -697,7 +704,7 @@ def score_by_conv(data: npt.ArrayLike,
                   operator: str = 'bigger',
                   plot_mask: bool = False,
                   plot_ov: bool = True,
-                  save: Optional[str] = None,
+                  save_overview: Optional[str] = None,
                   sample: int = 0) -> npt.ArrayLike:
     """
     Get a score by a continues wavelet transformation based convolution of the distribution with a single wavelet and score mask.
@@ -722,7 +729,7 @@ def score_by_conv(data: npt.ArrayLike,
         If true, the score mask is plotted.
     plot_ov : bool, default True
         If true, the overlay of the score mask and the convolved data is plotted.
-    save : bool, default False
+    save_overview : bool, default False
         If true, the figure is saved.
     sample : int, default 0
         Index of the sample to plot.
@@ -742,7 +749,7 @@ def score_by_conv(data: npt.ArrayLike,
     scores = score_mask(peaks, convolved_data, plot=plot_mask)
 
     if plot_ov:
-        plot_custom_conv(convolved_data, data, filtered_peaks, scores=scores, sample_n=sample, save=save)
+        plot_custom_conv(convolved_data, data, filtered_peaks, scores=scores, sample_n=sample, save_overview=save_overview)
 
     return scores
 
@@ -861,8 +868,9 @@ def density_plot(count_table: npt.ArrayLike,
     if main_plot:
         if save:
             plt.savefig(save)
-
-        plt.show()
+            #plt.close(fig)
+        else:
+            plt.show()
 
     figure = np.array([ax, fig])
 
@@ -933,8 +941,9 @@ def plot_wavelet_transformation(convolution: npt.ArrayLike,
     # Save the figure
     if save:
         plt.savefig(save)
-
-    plt.show()
+        #plt.close(fig)
+    else:
+        plt.show()
 
     axes = np.array([ax1, ax2])
 
@@ -947,7 +956,7 @@ def plot_custom_conv(convolved_data: npt.ArrayLike,
                      peaks: npt.ArrayLike,
                      scores: npt.ArrayLike,
                      sample_n: int = 0,
-                     save: Optional[str] = None) -> npt.ArrayLike:
+                     save_overview: Optional[str] = None) -> npt.ArrayLike:
     """
     Plot the overlay of the convolved data, the peaks and the score mask.
 
@@ -963,7 +972,7 @@ def plot_custom_conv(convolved_data: npt.ArrayLike,
         Array of the scores.
     sample_n : int, default 0
         Index of the sample to plot.
-    save : Optional[str], default None
+    save_overview : Optional[str], default None
         If true, the figure is saved under the given name.
 
     Returns
@@ -1002,10 +1011,11 @@ def plot_custom_conv(convolved_data: npt.ArrayLike,
 
     plt.tight_layout()
 
-    if save:
-        plt.savefig(save)
-
-    plt.show()
+    if save_overview:
+        plt.savefig(save_overview)
+        #plt.close(fig)
+    else:   
+        plt.show()
 
     axes = np.array([ax1, ax2, ax3])
 
@@ -1018,6 +1028,7 @@ def plot_custom_conv(convolved_data: npt.ArrayLike,
 def add_fld_metrics(adata: sc.AnnData,
                     fragments: Optional[str] = None,
                     barcode_col: Optional[str] = None,
+                    count_table_path: Optional[str | Path] = None,
                     barcode_tag: str = "CB",
                     chunk_size_bam: int = 1000000,
                     chunk_size_fragments: int = 5000000,
@@ -1043,6 +1054,7 @@ def add_fld_metrics(adata: sc.AnnData,
     ----------
     adata : sc.AnnData
         AnnData object to add the insert size metrics to.
+    count_table_path: Optional path to save the count table as TSV
     fragments : str, default None
         Path to fragments file.
     barcode_col : str, default None
@@ -1108,11 +1120,20 @@ def add_fld_metrics(adata: sc.AnnData,
                                                       regions=regions)
 
     elif bed:
-        count_table = insertsizes.insertsize_from_fragments(fragments=fragments,
-                                                            #barcodes=adata_barcodes,
-                                                            #chunk_size=chunk_size_fragments,
-                                                            #n_threads=n_threads)
-        )
+    
+        if count_table_path:
+            count_table = pd.read_csv(count_table_path, sep = "\t")
+            dists_arr = np.array([list(map(int, dist.split(','))) for dist in count_table['dist']], dtype=np.int64)
+
+        else:
+          count_table = insertsizes.insertsize_from_fragments(fragments=fragments,
+                                                              #barcodes=adata_barcodes,
+                                                              #chunk_size=chunk_size_fragments,
+                                                              #n_threads=n_threads)
+          )
+          
+          # convert the count_table to an array with the dtype int64
+          dists_arr = np.array(count_table['dist'].tolist(), dtype=np.int64)
 
     # get the mean insert size and the insert size counts separately
     means = count_table.pop('mean_insertsize')
@@ -1120,8 +1141,7 @@ def add_fld_metrics(adata: sc.AnnData,
 
     # get the barcodes from the count_table, which are the index and will be used to match the barcodes of the adata
     barcodes = count_table.index
-    # convert the count_table to an array with the dtype int64
-    dists_arr = np.array(count_table['dist'].tolist(), dtype=np.int64)
+
 
     # plot the densityplot of the fragment length distribution
     if plot:
