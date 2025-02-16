@@ -10,7 +10,8 @@ def insertsize_from_fragments(
     fragments: str | Path,
     min_size: int = 0,
     max_size: int = 1000,
-    memory_limit: str = '4GB'
+    memory_limit: str = '8GB',
+    output_file: Optional[str | Path] = None
 ) -> pd.DataFrame:
     """
     Process fragment file and calculate size distributions per barcode.
@@ -21,7 +22,8 @@ def insertsize_from_fragments(
         min_size: Minimum size threshold
         max_size: Maximum size threshold
         memory_limit: Memory limit for DuckDB
-    
+        output_file: Optional path to save results as TSV
+
     Returns:
         count_table: DataFrame with barcode statistics and distributions
     """
@@ -78,6 +80,13 @@ def insertsize_from_fragments(
     """, [fragments, min_size, max_size, min_size, max_size]).df()
     
     count_table.set_index('barcode', inplace=True)
+
+
+    if output_file is not None:
+        output_df = count_table.copy()
+        output_df['dist'] = output_df['dist'].apply(lambda x: ','.join(map(str, x)))
+        output_df.to_csv(output_file, sep='\t')
+
     con.close()
     
     return count_table
