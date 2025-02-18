@@ -22,6 +22,7 @@ class BTSing:
             pvals_dict[var] = sum(1 for count in perm_counts[var] if count >= temp_counts[var]) / n_iter
 
         return pvals_dict
+        
     def numerical(self, meta_column, cl_samples, n_iter=1000):
         cluster_values = meta_column.loc[cl_samples].dropna().values
         non_cluster_values = meta_column.drop(cl_samples, errors='ignore').dropna().values
