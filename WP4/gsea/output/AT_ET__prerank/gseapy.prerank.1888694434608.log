@@ -1,0 +1,23 @@
+2025-02-16 19:36:26,504 prerank1888694434608::[WARNING ] Input gene rankings contains NA values(gene name and ranking value), drop them all!
+2025-02-16 19:36:26,507 prerank1888694434608::[DEBUG   ] NAs list:
+                    0   1
+9   healthy-6688-p_56 NaN
+15      pah-6712-p_17 NaN
+17       pah-6858-p_7 NaN
+18       pah-6863-p_3 NaN
+30       pah-6942-p_9 NaN
+31  ph-lung-6689-p_29 NaN
+32  ph-lung-6747-p_46 NaN
+33  ph-lung-6912-p_65 NaN
+34  ph-lung-6649-p_33 NaN
+37  ph-lung-6748-p_43 NaN
+47  ph-lung-6952-p_36 NaN
+2025-02-16 19:36:26,518 prerank1888694434608::[WARNING ] Duplicated values found in preranked stats: 30.77% of genes
+The order of those genes will be arbitrary, which may produce unexpected results.
+2025-02-16 19:36:26,520 prerank1888694434608::[INFO    ] Parsing data files for GSEA.............................
+2025-02-16 19:36:26,523 prerank1888694434608::[INFO    ] 0000 gene_sets have been filtered out when max_size=500 and min_size=1
+2025-02-16 19:36:26,523 prerank1888694434608::[INFO    ] 0141 gene_sets used for further statistical testing.....
+2025-02-16 19:36:26,523 prerank1888694434608::[INFO    ] Start to run GSEA...Might take a while..................
+2025-02-16 19:36:26,946 prerank1888694434608::[INFO    ] Start to generate gseapy reports, and produce figures...
+2025-02-16 19:36:26,946 prerank1888694434608::[INFO    ] Congratulations. GSEApy runs successfully................
+
