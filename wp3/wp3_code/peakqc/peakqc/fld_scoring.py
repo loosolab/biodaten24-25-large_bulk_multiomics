@@ -1190,10 +1190,10 @@ def add_fld_metrics(
         adata_barcodes = adata.obs[barcode_col].tolist()
     else:
         adata_barcodes = adata.obs.index.tolist()
-
+    
     
     if insertsize_table:
-      count_table = pd.read_csv(insertsize_table, sep = "\t")
+      count_table = pd.read_csv(insertsize_table, sep = "\t", index_col=0)
             
       dists_arr = np.array(
             [list(map(int, dist.split(','))) for dist in count_table['dist']],
