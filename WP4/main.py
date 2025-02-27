@@ -11,10 +11,9 @@ def main():
     parent_dir = Path(__file__).parent
     #ArgParser
     parser = argparse.ArgumentParser(description='Matrix and meta file should be in "init_input" folder. Copy the name of your meta and matrix file in the corresponding fields in config.json')
-    parser.add_argument("-n", nargs=1, type=str, help='Type the names of analyses to skip them. Seprate with "_". For example: unpast_gsea_bootstrapping_ora will skip all possible analyses', default=None)    
+    parser.add_argument("-n", nargs=1, type=str, help='Type the names of analyses to skip them. Seprate with "_". For example: unpast_gsea_bootstrapping_ora will skip all possible analyses', default=None)   
     parser.add_argument("matrixname", type=str, help='The name of the matrix file. The file should be in "init_input" folder', default=None)
     parser.add_argument("metaname", type=str, help='The name of the meta file. The file should be in "init_input" folder', default=None)
-    
 
     args = parser.parse_args()
     testsdict = {"unpast":True,"gsea":True,'bootstrapping':True,'ora':True}
@@ -32,6 +31,11 @@ def main():
     metafile_name = args.metaname
     unpast_basename = config['unpast_basename']
     cluserfile_name = config['clusterfile_name']
+    numMetaVar_configList = config['numerical_columns'].split(',')
+    numMetaVar_configList = [e.strip().lower() for e in numMetaVar_configList]
+    catMetaVar_configList = config['categorical_columns'].split(',')
+    catMetaVar_configList = [e.strip().lower() for e in catMetaVar_configList]
+    error_label = config['error_label']
     results_path = f'{parent_dir}/results/{config['results_name']}'
 
     # Initial Input, matrix and meta dataframes
@@ -39,6 +43,15 @@ def main():
     meta_path = os.path.abspath(f'{parent_dir}/init_input/{metafile_name}')
     meta_df = pd.read_csv(meta_path, sep='\t', header=0, index_col=0, engine='python')
     matrix_df = pd.read_csv(matrix_path, sep='\t', header=0, index_col=0, engine='python')
+
+    # Sanity Check -> should produce the same meta_df but edited with ERSANs
+    import sanity_check as snch
+    sanCheck = snch.SanCheck(
+        determination_threshold = 4.4,   # 4.4 is based on various testing and should be adjusted according to the data
+        number_of_estimators = 1000,
+        meta_data_df = meta_df
+    )
+    meta_df = sanCheck.SanityCheck()
     symbol = "|"
     matrix_df.index = matrix_df.index.str.split(symbol, n=1).str[-1]          # separating and removing ENS.... gene identifiers
     meta_df.columns = meta_df.columns.str.replace('/', '&')
@@ -46,13 +59,16 @@ def main():
 
     num_metavar_list = []
     cat_metavar_list = []
+
     for column in meta_df.columns:
-        if pd.to_numeric(meta_df[column].dropna(), errors='coerce').notna().all():
+        if column.lower().strip() in numMetaVar_configList:
             num_metavar_list.append(column)
-        elif pd.to_numeric(meta_df[column].dropna(), errors='coerce').notna().all() == False and not 'id' in column:
+        elif column.lower().strip() in catMetaVar_configList:
             cat_metavar_list.append(column)
         else:
             continue
+    
+
 
     # UnPast
     if testsdict['unpast'] == True:
@@ -71,17 +87,19 @@ def main():
     else:
         clusterpath = f'{parent_dir}/clusters/{cluserfile_name}'
     clusters_df = pd.read_csv(clusterpath, sep="\t", header=0, index_col=0)
-
-    # GSEA Prerank
+    # ANALYSIS of PVALs
+    # GSEA GMT Maker
     if testsdict['gsea'] == True:
         import GSEA as gs
         gsea = gs.GSEA(
             matrix_df=matrix_df,
             meta_df=meta_df,
-            clusters_df=clusters_df)
+            clusters_df=clusters_df,
+            error_label = error_label)
         gmt_file_path = gsea.gmt_maker()
-        gsea.prerank(gmt_file_path)
-    gsea_outdir = f'{parent_dir}/gsea/output'
+        # gsea.prerank(gmt_file_path)
+    # gsea_outdir = f'{parent_dir}/gsea/output'
+    # contrast_df = gsea.contrast(gmt_file_path)
 
     # Bootstrapping
     if testsdict['bootstrapping'] == True:
@@ -94,85 +112,95 @@ def main():
         ora = ora.ORA()
 
     # Final results (creation of the .csv table)
-    # iterationg through: 1. cluster table from unpast, 2. metadata table
-    columns_list = ['test', 'cluster genes', 'cluster gene ids', 'variable factors', 'gsea pval', 'bootstrapping pval', 'ora pval']
-    columns_list = [ele for ele in columns_list if testsdict.get(ele.split(' ')[0], None) != False]
+    # iterationg through: 1. metadata table, 2. cluster table from unpast
+    columns_list = ['test', 'cluster genes', 'cluster gene ids', 'variable factors', 'gsea preranked pval', 'gsea contrast pval' , 'bootstrapping pval', 'ora pval']
+    # columns_list = [ele for ele in columns_list if testsdict.get(ele.split(' ')[0], None) != False]
     output_df = pd.DataFrame(columns=columns_list)
     result_list = []
-    for cl_index, cl_row in clusters_df.iterrows():
-        cl_name = f"cluster_{cl_index}_{cl_row['direction']}"    #cl name
-        print(f'Cl name: {cl_name}')
-        cl_samples = cl_row['samples'].split()
-        cl_gene_num = cl_row['n_genes']                  #n genes
-        cl_gene_ids = cl_row['genes']                    #gene names
-        for column in meta_df.columns:
-            print(f'column: {column}')
-            if column in num_metavar_list:
-                num_meta_var = column             #num_meta_var
-                column_iscat = False                              #if the column is categorical
-            elif column in cat_metavar_list:
-                cat_meta_var = column              #cat_meta_var
-                column_iscat = True
-            else:
-                column_iscat = None
-                continue
-            # GSEA pval
-            if testsdict['gsea'] == True and column_iscat == False:
-                for dirnames in os.listdir(gsea_outdir):  
-                    if num_meta_var.lower() == dirnames.split('__')[0].lower() and Path(os.path.join(gsea_outdir, dirnames)).is_dir() and '__prerank' in dirnames:
-                        gsea_outfile = os.path.join(gsea_outdir, dirnames, "gseapy.gene_set.prerank.report.csv")
-                    else: 
-                        continue
-                    if os.path.exists(gsea_outfile):
-                        gsea_outdf = pd.read_csv(gsea_outfile)
-                        for index,row in gsea_outdf.iterrows():
-                            if cl_name == row['Term'] and not row.empty:
-                                gsea_pval = row["FDR q-val"]  # FDR q-val
-            else:
-                gsea_pval = None
-            # categorical
-            # bootstrapping pval
+    # Column Iteration
+    for column in meta_df.columns:
+        print(f'Iteration is now on column: {column}')
+        if column in num_metavar_list:
+            num_meta_var = column             #num_meta_var
+            column_iscat = False                              #if the column is categorical
+        elif column in cat_metavar_list:
+            cat_meta_var = column              #cat_meta_var
+            column_iscat = True
+        else:
+            column_iscat = None
+            continue
+        # GSEA
+        if testsdict['gsea'] == True and column_iscat == False:
+            # prerank
+            gsea_pval_df_list = gsea.prerank(output_gmt_path=gmt_file_path, 
+                                            metacol=column, 
+                                            samps = cl_samples)
+            gseaPvalPreranked_df = gsea_pval_df_list[0]
+            gseaPvalContrast_df = gsea_pval_df_list[1]
+        # Cluster Iteration
+        for cl_index, cl_row in clusters_df.iterrows():
+            cl_name = f"cluster_{cl_index}_{cl_row['direction']}"    #cl name
+            print(f'Iteration is now on cluster: {cl_name}')
+            cl_samples = cl_row['samples'].split()
+            cl_gene_num = cl_row['n_genes']                  #n genes
+            cl_gene_ids = cl_row['genes']                    #gene names
+            # I. categorical
+            # 1. BTS
             if column_iscat == True:
                 unique_vars_list = meta_df[column].unique().tolist()
                 unique_vars_count = len(unique_vars_list)   
                 for unvar in unique_vars_list:
+                    # 1. BTS 
                     if testsdict['bootstrapping'] == True:
                         cat_bts_pval_dict = bts.categorical(meta_column=meta_df[column], cl_samples=cl_samples)
                         bts_pval = cat_bts_pval_dict[unvar]
+                    # 2. ORA
                     if testsdict['ora'] == True:
                         cat_ora_pval_dict = ora.categorical(meta_column=meta_df[column], cl_samples=cl_samples)
                         ora_pval = cat_ora_pval_dict[unvar]
+                    
+                    # creating and appending the resultlist as a line in final output table
+                    # values of the 'test' column differ depending on whether the metavar is categotical or numerical
+                    # for nums the result line will be appended once for each metadata of each cluster
+                    # for cats the result line will be appended for each instance of metadata column (male, female etc.)
+
+                    # Resultlist cat
                     result_list.append({
                         'test': f"{cl_name} - {cat_meta_var}/{unvar}".replace('&','/'),
                         'cluster genes': cl_gene_num,
                         'cluster gene ids': cl_gene_ids,
                         'variable factors': unique_vars_count,
-                        'gsea pval': '-',
+                        'gsea preranked pval': '-',
+                        'gsea contrast pval': '-',
                         'bootstrapping pval': bts_pval if 'bts_pval' in locals() else None,
                         'ora pval': ora_pval if 'ora_pval' in locals() else None
                     })
                     bts_pval = None
                     ora_pval = None
                     print('Cat added to the list')
-            # numerical
-            elif testsdict['bootstrapping'] == True and column_iscat == False:
-                bts_pval = bts.numerical(meta_column=meta_df[column], cl_samples=cl_samples)
-
-            # creating and appending the resultlist as a line in final output table
-            # values of the 'test' column differ depending on whether the metavar is categotical or numerical
-            # for nums the result line will be appended once for each metadata of each cluster
-            # for cats the result line will be appended for each instance of metadata column (male, female etc.)
+            # II. numerical
+            elif column_iscat == False:
+                # 1. GSEA
+                if testsdict['gsea'] == True:
+                    gseaPreranked_pval = gseaPvalPreranked_df.loc[cl_name, 'FDR q-val'] if cl_name in gseaPvalPreranked_df.index else None
+                    gseaContrast_pval = gseaPvalContrast_df.loc[cl_name, 'FDR q-val'] if cl_name in gseaPvalContrast_df.index else None
+                # 2. BTS
+                if testsdict['bootstrapping'] == True:
+                    bts_pval = bts.numerical(meta_column=meta_df[column], cl_samples=cl_samples)
+            # Resultlist num
             if column in num_metavar_list:
                 result_list.append({
                     'test': f"{cl_name} - {num_meta_var}".replace('&','/'),
                     'cluster genes': cl_gene_num,
                     'cluster gene ids': cl_gene_ids,
                     'variable factors': 'NA',
-                    'gsea pval': gsea_pval if 'gsea_pval' in locals() else None,
-                    'bootstrapping pval': bts_pval if 'bts_pval' in locals() else None,
-                    'ora pval': ora_pval if 'ora_pval' in locals() else None
+                    'gsea preranked pval': gseaPreranked_pval if 'gseaPreranked_pval' in locals() else 'Err172',
+                    'gsea contrast pval': gseaContrast_pval if 'gseaContrast_pval' in locals() else 'Err173',
+                    'bootstrapping pval': bts_pval if 'bts_pval' in locals() else '?Err174',
+                    'ora pval': '-'
                 })
-                gsea_pval = None
+                gseaPreranked_pval = None
+                gseaContrast_pval = None
                 bts_pval = None
                 ora_pval = None
                 print('Num added to the list')
