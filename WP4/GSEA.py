@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import gseapy as gp
 from pathlib import Path
+import numpy as np
 
 class GSEA:
     #path management
@@ -19,7 +20,8 @@ class GSEA:
         self.meta_df = meta_df
         self.clusters_df = clusters_df
         self.error_label = error_label
-
+        self.output_gmt_path = self.gmt_maker()
+    
     def gmt_maker(self): #creates a gmt file needed for the test
         output_gmt_path = os.path.join(self.gsea_indir, 'clusters.gmt')
         with open(output_gmt_path, "w") as gmt:
@@ -35,45 +37,68 @@ class GSEA:
                 gmt.write(cluster + "\n")
         print(f"Gene sets saved to {output_gmt_path}")
         return output_gmt_path
-    
-    def prerank(self, output_gmt_path, metacol, samps):
-        resdict_preranked = {}
-        resdict_contrast = {}
-        os.makedirs('gsea/input/rnks', exist_ok=True)
-        rnk_outdir = os.path.abspath("gsea/input/rnks")
+
+    def prerank(self, metacol):
+        output_gmt_path = self.output_gmt_path
         rnk_df = pd.DataFrame({'Sample': self.meta_df.index, metacol : self.meta_df[metacol]})
         rnk_df = rnk_df.applymap(lambda x: None if isinstance(x, str) and self.error_label in x else x) #ERSAN Check
-        rnk_cont_df = rnk_df.loc[~rnk_df.index.isin(samps), [metacol]].copy()
-        rnk_path = f'{rnk_outdir}/{metacol}.rnk'
-        rnk_df.to_csv(rnk_path, sep='\t', header=False, index=False)
-        os.makedirs(f"GSEA/output/{metacol}__prerank", exist_ok=True)
-        prerank_dirs_path = os.path.abspath(f"gsea/output/{metacol}__prerank")
+        rnk_df.set_index('Sample', inplace=True)
         try:
             print(f'Preranking: {metacol} - Prerank')
-            preranked_res = gp.prerank(rnk=rnk_path,
+            print(f'Prerank RNK: ')
+            print(rnk_df)
+            print('Gene sets: ')
+            print(output_gmt_path)
+            preranked_res = gp.prerank(rnk=rnk_df,
                 threads=4, 
                 gene_sets=output_gmt_path, 
                 permutation_num=1000,
                 min_size=1,
                 outdir=None,
-                no_plot=True)
+                no_plot=True,
+                verbose=True)
             print(f'Preranked: {metacol}')
         except Exception as e:
             print(f'Error processing a column {metacol}: {e}')
         resDF_preranked = pd.DataFrame(preranked_res.res2d[['Term', 'FDR q-val']]).set_index('Term')
-        try:
-            print(f'Preranking: {metacol} - Contrast')
-            contrast_res = gp.prerank(rnk=rnk_cont_df,
-                threads=4, 
-                gene_sets=output_gmt_path, 
-                permutation_num=1000,
-                min_size=1,
-                outdir=None,
-                no_plot=True)
-            print(f'Preranked: {metacol}')
-        except Exception as e:
-            print(f'Error processing a column {metacol}: {e}')
+        print('Prerank Result:')
+        print(resDF_preranked)
+        return resDF_preranked
+
+    def contrast(self, metacol, samps, cluster):
+        output_gmt_path = self.output_gmt_path     
+        rnk_df = pd.DataFrame({'Sample': self.meta_df.index, metacol : self.meta_df[metacol]})
+        rnk_df = rnk_df.applymap(lambda x: None if isinstance(x, str) and self.error_label in x else x) #ERSAN Check
+        rnk_df.set_index('Sample', inplace=True)
+        rnk_cont_df = rnk_df.loc[~rnk_df.index.isin(samps), [metacol]].copy()
+        dg = "DUMMY_GENE"     # To avoid the cluster being filtered out from geneset
+        rnk_cont_df.loc[dg] = {'Sample' : dg, metacol: round(rnk_df[metacol].mean(), 1)}
+        with open(output_gmt_path, "r") as infile:
+            for line in infile:
+                if cluster in line:
+                    parts = line.strip().split("\t")
+                    parts.append(dg)
+                    genline = "\t".join(parts[0:1])
+                    gendict = {genline: parts[2:]}
+                    print(f'Gendict: {gendict}')
+                    try:
+                        print(f'Preranking: {metacol} - Contrast, cluster: {cluster}')
+                        print(f'Samples {samps}')
+                        print(f'Contrast RNK: ')
+                        print(rnk_cont_df)
+                        contrast_res = gp.prerank(rnk=rnk_cont_df,
+                            threads=4,
+                            gene_sets=gendict,
+                            permutation_num=1000,
+                            min_size=1,
+                            outdir=None,
+                            no_plot=True,
+                            verbose=True)
+                        print(f'Contrasted: {metacol}')
+                    except Exception as e:
+                        print(f'Error processing a column {metacol}: {e}')
         resDF_contrast = pd.DataFrame(contrast_res.res2d[['Term', 'FDR q-val']]).set_index('Term')
-        
-        return resDF_contrast, resDF_preranked
+        print('Contrast:')
+        print(resDF_contrast)
+        return resDF_contrast
 
