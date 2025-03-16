@@ -1,5 +1,8 @@
 {
     "unpast_basename": "unpast_basename",
-    "clusterfile_name": "unpast_1a_cluster.tsv",
-    "results_name": "final_results.csv"
+    "clusterfile_name": "unpast_1a_cluster_test.tsv",
+    "results_name": "final_results.csv",
+    "numerical_columns": "age, weight, Tiffeneau Index/FEV1VC, na_column",
+    "categorical_columns": "gender, condition, na_column",
+    "error_label": "ERRSAN"
 }

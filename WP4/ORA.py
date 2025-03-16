@@ -4,15 +4,16 @@ import pandas as pd
 
 class ORA:
 
-    def __init__(self):
-        pass
+    def __init__(self, error_label):
+        self.error_label = error_label
 
     def categorical(self, meta_column, cl_samples):
         # N = Total population (e.g., total samples)
         # M = Total number of successes (e.g., total males)
         # n = Sample size (e.g., size of the cluster)
         # k = Number of successes in the sample (e.g., number of males in the cluster)
-
+        meta_column = meta_column.dropna()
+        meta_column = meta_column[~meta_column.str.contains(self.error_label, na=False)]
         N = len(meta_column)
         n = len(cl_samples)
         pvals_dict = {}
