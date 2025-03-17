@@ -129,6 +129,8 @@ Niedrige oder nahe 0 liegende Werte deuten auf eine geringe oder zufällige Übe
 
 ![](./images/CoehensKappa.png)
 
+![](./images/qc_standards.png)
+
 
 
 [^1]: https://www.biorxiv.org/lookup/doi/10.1101/2025.02.20.639146}
