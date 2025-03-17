@@ -27,6 +27,7 @@ Dieser Schritt dauerte mehrere Tage. Im Ordner 'wp3_code/bam_sinto_bed' findet s
 Die Pipeline ist eine Mischung aus Shell-Script und Python Funktionen. Diese wurde später komplett in Python übersetzt.
 
 ### Anwendung und Überarbeitung von PeakQC
+![](./images/peackqc_overview.png)
  Die fragmentierte BAM Dateien, werden anschließen mit der PeakQC Software für jedes Sample wie folgt zusammengefasst:
 - Es wird die Fragmentlängenverteilung erstellt.
 - Die Anzahl der Fragmente pro Sample bestimmt.
