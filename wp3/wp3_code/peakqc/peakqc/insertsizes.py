@@ -97,6 +97,8 @@ def insert_bed_to_duckdb(
   fragment_files: List[str],
   db_path: str,
   summarize: bool = False,
+  min_size: int = 0,
+  max_size: int = 1000, 
   memory_limit: str = '8GB',
   count_table_path: Optional[str | Path] = None) -> pd.DataFrame:
     """
@@ -107,6 +109,8 @@ def insert_bed_to_duckdb(
         db_path (str): Path to the DuckDB database where data will be stored.
         summarize (bool): Whether to summarize the data while inserting it. Default is False.
         memory_limit: Memory limit for DuckDB.
+        min_size: Minimum size threshold for fragments
+        max_size: Maximum size threshold for fragments
         count_table_path: Optional path to save the count table as TSV.
     Returns:
         count_table: DataFrame with barcode statistics and distributions

@@ -23,6 +23,17 @@ import peakqc.insertsizes as insertsizes
 import math
 
 
+from numpy.random import default_rng
+
+import concurrent.futures
+
+from beartype.typing import Optional, Literal, SupportsFloat, Tuple
+from beartype.typing import Optional, Literal, SupportsFloat, Tuple, Union, Dict
+from beartype import beartype
+import numpy.typing as npt
+
+
+
 @beartype
 def moving_average(series: npt.ArrayLike,
                    n: int = 10) -> npt.ArrayLike:
@@ -810,6 +821,7 @@ def density_plot(dists_array: npt.ArrayLike,
     """
  
     # handle 0,1 min/max scaled count_table
+    # Remove if normalization is used?
     if dists_array.dtype != 'float64':
         if np.max(dists_array) > 1:
             rounded = (np.round(dists_array)).astype('float64')
@@ -1027,67 +1039,201 @@ def plot_custom_conv(convolved_data: npt.ArrayLike,
 # ///////////////////////////////////////// sampling for bulk data \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 
-def multinomial_sampler(args: Tuple[np.ndarray, np.ndarray, int, int]) -> np.ndarray:
-    dists_arr, subsample_mask, target_size, seed = args
-    
-    np.random.seed(seed + mp.current_process().pid)
-    
-    subsampled_counts = np.zeros_like(dists_arr)
-    
-    for i in np.where(subsample_mask)[0]:
-        probs = dists_arr[i] / dists_arr[i].sum()
-        subsampled_counts[i] = np.random.multinomial(target_size, probs)
-    
-    subsampled_counts[~subsample_mask] = dists_arr[~subsample_mask]
-    
-    return subsampled_counts
-    
+# https://numpy.org/doc/2.2/reference/random/multithreading.html
+@beartype
+class MultithreadedMultinomialSampler:
+    """Multithreaded multinomial sampler."""
 
-def parallel_multinomial_subsampling(
-    dists_arr: np.ndarray, 
-    insert_counts: Union[np.ndarray, pd.Series], 
-    sample_size: int = 10000, 
-    n_simulations: int = 100, 
-    seed: int = 42, 
-    n_threads: int = 8
-) -> Tuple[np.ndarray, np.ndarray]:
+    def __init__(self,
+                 dists_arr: npt.ArrayLike,
+                 insert_counts: Union[npt.ArrayLike, pd.Series],
+                 sample_size: int = 10000,
+                 n_simulations: int = 100,
+                 size: int = 1,
+                 seed: int = 42,
+                 n_threads: Optional[int] = None,
+                 sample_all: bool = False):
+        """
+        Initialize the multithreaded multinomial sampler.
 
-    """
-    Performs parallel multinomial subsampling over multiple simulations.
-
-    Args:
-        dists_arr (np.ndarray): 
-            A 2D array where each row represents a probability distribution.
-        insert_counts (np.ndarray): 
+        Parameters
+        ----------
+        dists_arr : npt.ArrayLike
+            A 2D array where each row represents the count distribution of fragment lengths.
+        insert_counts : Union[npt.ArrayLike, pd.Series]
             A 1D array indicating the number of elements per distribution.
-        sample_size (int, optional): 
-            The number of samples to draw per multinomial sampling. Defaults to 10,000.
-        n_simulations (int, optional): 
-            The number of independent simulations to run. Defaults to 100.
-        seed (int, optional): 
-            Random seed for reproducibility. Defaults to 42.
-        n_threads (int, optional): 
-            The number of parallel processes to use. Defaults to 8.
+        sample_size : int, optional
+            The number of samples to draw per multinomial sampling, by default 10000.
+        n_simulations : int, optional
+            The number of independent simulations to run, by default 100
+        size : int, optional
+            Number of multinomial experiments to perform. Default is 1.
+        seed : int, optional
+            Random seed for reproducibility, by default 42
+        n_threads : Optional[int], optional
+            The number of parallel threads to use. If None, will determine automatically.
+        sample_all : bool, optional
+            If True, sample all distributions either based on insert_counts or sample_size, by default False.
+            If False, sample where insert_counts > sample_size.
+        """
+        # Determine thread count if not specified
+        if n_threads is None:
+            cpu_count = mp.cpu_count()
+            if cpu_count >= 4:
+                n_threads = 4
+            elif cpu_count >= 2:
+                print("Less than the optimal four threads available. Falling back to: 2 threads.")
+                n_threads = 2
+            else:
+                n_threads = 1
+                print("Only one thread available. MC downsampling will take some time.")
 
-    Returns:
-        Tuple[np.ndarray, np.ndarray]: 
-            - mean_counts (np.ndarray): The mean of the sampled distributions across simulations.
-            - std_counts (np.ndarray): The standard deviation of the sampled distributions across simulations.
-    """
-    
-    subsample_mask = insert_counts > sample_size
-    args = [(dists_arr, subsample_mask, sample_size, seed + i) for i in range(n_simulations)]
-    
-    with Pool(processes=n_threads) as pool:
-        results = pool.map(multinomial_sampler, args)
+        self.n_threads = n_threads
 
-    subsampled_dists_arr = np.stack(results)
-    
-    # Round mean to int
-    mean_counts = np.round(np.mean(subsampled_dists_arr, axis=0)).astype('int64')
-    std_counts = np.std(subsampled_dists_arr, axis=0)
-    
-    return mean_counts, std_counts
+        # Convert to numpy array if pandas Series
+        if isinstance(insert_counts, pd.Series):
+            insert_counts = insert_counts.values
+
+        self.dists_arr = dists_arr
+        self.insert_counts = insert_counts
+        self.sample_size = sample_size
+        self.n_simulations = n_simulations
+        self.size = size
+        self.seed = seed
+
+        # Create seeds sequence
+        # https://numpy.org/doc/2.2/reference/random/parallel.html#seedsequence-spawn
+        seed_seq = np.random.SeedSequence(self.seed)
+        # Spawn child seeds for the random generators
+        self.child_seeds = seed_seq.spawn(n_simulations)
+
+        # Sample all flag
+        self.sample_all = sample_all
+
+        # Create mask for samples needing subsampling
+        if sample_all:
+            # If sample_all is True, sample everything
+            self.subsample_mask = insert_counts > 0
+        else:
+            if sample_size is None:
+                # If true and not sample_all = True
+                # Will return in sampler due to all False
+                self.subsample_mask = np.zeros_like(insert_counts, dtype=bool)
+            else:
+                # Otherwise, sample where insert_counts > sample_size
+                self.subsample_mask = insert_counts > sample_size
+
+        # Initialize executor
+        self.executor = concurrent.futures.ThreadPoolExecutor(n_threads)
+
+        # Std collector
+        self.std_dev = np.zeros_like(self.dists_arr, dtype=np.float64)
+
+    @beartype
+    def process_batch(self, batch_indices: npt.ArrayLike) -> Dict[np.int64, Tuple[npt.ArrayLike, npt.ArrayLike]]:
+        """Process a batch of distribution indices."""
+
+        results = {}
+
+        for idx in batch_indices:
+            dist = self.dists_arr[idx]
+            total = dist.sum()
+            if total <= 0:
+                self.pbar.update(1)
+                continue
+
+            pvals = dist / total
+
+            # Using Welford's online update for M1 (mean) and M2 (variance)
+            # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+            num_bp = len(dist)
+
+            M1s = np.zeros(num_bp, dtype=np.float64)
+            M2s = np.zeros(num_bp, dtype=np.float64)
+            N = 0
+
+            # Create random generators for each simulation
+            _random_generators = [default_rng(s) for s in self.child_seeds]
+
+            # If sample_size is None use insert_size as sample size
+            if self.sample_size is None:
+                _sample_size = self.insert_counts[idx]
+            else:
+                # If sample size provided, use sample size
+                _sample_size = self.sample_size
+
+            # Iter over n = n_simulations random generator with n different seeds
+            for rng in _random_generators:
+                sample = rng.multinomial(_sample_size, pvals, self.size)
+
+                # Iter over
+                for smpl in sample:
+                    N += 1
+                    delta = smpl - M1s
+                    M1s += delta / N
+                    delta2 = smpl - M1s
+                    M2s += delta * delta2
+
+            M1s = np.round(M1s).astype(np.int64)
+
+            if N > 1:
+                M2s = M2s / (N - 1)
+                std_devs = np.sqrt(M2s)
+            else:
+                # No variance, thus
+                std_devs = np.zeros_like(M1s)
+
+            # Store results
+            results[idx] = (M1s, std_devs)
+
+            self.pbar.update(1)
+
+        return results
+
+    @beartype
+    def sample(self) -> Tuple[npt.ArrayLike, npt.ArrayLike]:
+        """Perform multithreaded multinomial sampling."""
+
+        # Early return if no subsampling needed
+        if not np.any(self.subsample_mask):
+            # Return zeros for std_dev since no sampling was done
+            return self.dists_arr, self.std_dev
+
+        # Get indices that need processing
+        indices = np.where(self.subsample_mask)[0]
+
+        # Process distributions in batches
+        batch_size = max(1, len(indices) // self.n_threads)
+        batches = [indices[i:i + batch_size] for i in range(0, len(indices), batch_size)]
+        self.num_batches = len(batches)
+
+        # Set up progress bar
+        self.pbar = tqdm(
+            total=len(indices),
+            desc="Processing Samples"
+        )
+
+        futures = [self.executor.submit(self.process_batch, batch) for batch in batches]
+
+        for future in concurrent.futures.as_completed(futures):
+            # Collect results
+            batch_results = future.result()
+
+            # Fill dists_arr and std_dev array with samples mean and std
+            for idx, (result, std) in batch_results.items():
+                self.dists_arr[idx] = result
+                self.std_dev[idx] = std
+
+        self.pbar.close()
+
+        return self.dists_arr, self.std_dev
+
+    def __del__(self):
+        """Clean up resources."""
+        if hasattr(self, 'executor'):
+            self.executor.shutdown(wait=False)
+
+
 
 # ///////////////////////////////////////// final wrapper \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -1208,12 +1354,18 @@ def add_fld_metrics(
       
     # Monte Carlo Sampling (Optional)
     if sample_size is not None:
-        dists_arr_subsampled, _ = parallel_multinomial_subsampling(
-            dists_arr, insert_counts, sample_size=sample_size, n_simulations=mc_samples, seed=mc_seed, n_threads=n_threads
+        sampler = MultithreadedMultinomialSampler(
+            dists_arr,
+            insert_counts,
+            sample_size=sample_size,
+            n_simulations=mc_samples,
+            seed=mc_seed,
+            n_threads=n_threads
         )
+        dists_arr_subsampled, _ = sampler.sample()
     else:
         dists_arr_subsampled = dists_arr
-         
+
   
     barcodes = count_table.index.copy()
     
