@@ -109,16 +109,8 @@ Die ermittelten FLD-Scores sowie andere Metriken und Graphiken wurden WP1 zur Ve
 - Keine Zusammenfassung der Fragment-Dateien in einem gemeinsamen BAM-File für große Datensätze:
     Gegenvorschläge umfassen das weglassen oder die Erstellung einer DuckDB-Database beim Zusammenfassen der Daten zu einem Count-Table (Vorschläge dafür finden sich in peakqc.insertsize.py oder bam_sinto_bed_into_count_table.py)
 
-## Vergleich zwischen FLD-Scoring und anderen Metriken
-WP1 war so freundlich uns die nachstehenden UMAPs zu erzeugen. Außerdem wurde Coehn's Kappa berechnet, um zu schauen, wie unterschiedlich sich die KO-Kriterien der verschiedenen Metriken auswirken.
-
-Auf die Auswahl und Anwendung der Metriken für die Clusterbildung wird jedoch mehr von WP1 eingegangen.
-
-[./images/ BEISPIEL]
-[./images/ BEISPIEL]
-[./images/ BEISPIEL]
-
-INTERPREATION
+## Vergleich des FLD-Scoring mit anderen Metriken
+WP1 war so freundlich uns die nachstehenden PCAs und UMAPs zu erzeugen. Außerdem wurde Coehn's Kappa berechnet, um zu schauen, wie unterschiedlich sich die KO-Kriterien der verschiedenen Metriken auswirken.
 
 ### Cohen's Kappa:
 Um die Filtereffekte der verschiedenen Metriken zu untersuchen, wurden die Samples basierend auf den - von WP2 ermittelten - Schwellenwerten gefiltert und die binäre Klassifikation "gefiltert vs. nicht gefiltert" mit Cohen's Kappa verglichen.
@@ -131,6 +123,13 @@ Niedrige oder nahe 0 liegende Werte deuten auf eine geringe oder zufällige Übe
 
 ![](./images/qc_standards.png)
 
+!!!!!!!Welche abgedeckt, stärken schwächen im Vergliech zu PeakQC!!!!!!
+
+![](./images/ScoreUmapsWP3.png)
+
+Auf die Auswahl und Anwendung der Metriken für die Clusterbildung wird jedoch mehr von WP1 eingegangen.
+
+!!!!!!!!!!!!!!INTERPREATION!!!!!!!!!!!!!!!!!!!!!!!
 
 
 [^1]: https://www.biorxiv.org/lookup/doi/10.1101/2025.02.20.639146}
