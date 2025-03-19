@@ -13,10 +13,10 @@ This project is divided into four **Work Packages (WPs)**, each responsible for 
 
 #### WP2 - 
 
-#### WP3 - Quality Control
-WP3 is responsible for assessing the quality of bulk ATAC-seq data using QC metrics.
+#### WP3 - Evaluation of PeakQC for Bulk ATAC-seq
+WP3 is responsible for evaluating PeakQC [https://www.biorxiv.org/content/10.1101/2025.02.20.639146v1.full] as a quality control (QC) method for bulk ATAC-seq data.
 
-This Workflow includes the conversion from BAM to BED, the Quality Control with PeakQC [https://www.biorxiv.org/content/10.1101/2025.02.20.639146v1.full] and the Metric Evaluation.
+This includes the conversion from BAM to BED to extract fragment information, the adaptation of PeakQC for bulk ATAC-seq data and the assessment of PeakQC metrics derived from our analysis.
 
 #### WP4 - 
 
