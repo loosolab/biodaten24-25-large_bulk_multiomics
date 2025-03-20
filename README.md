@@ -9,7 +9,12 @@ This project is based on bulk ATAC-seq and RNA-seq data from COVID-19 patient sa
 ## Project Structure
 This project is divided into four **Work Packages (WPs)**, each responsible for a different aspect of the analysis:
 
-#### WP1 - 
+#### WP1 - bulk ATAC-seq analysis 
+In this project, WP1 is responsible for analyzing the bulk ATAC-seq data of the NAPKON project. 
+
+The data is run through various notebooks of the "SC-Framework"-project (https://github.com/loosolab/SC-Framework), which was originaly designed for single-cell data. To ensure an accurate analysis it was necessary to adapt the notebooks to the bulk data.
+
+The analysis includes assembly, quality control, normalization, batch correction, clustering, group marker- and proportion- analysis. 
 
 #### WP2 - 
 
