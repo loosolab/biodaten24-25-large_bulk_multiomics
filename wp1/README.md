@@ -8,6 +8,12 @@ The data is run through various notebooks of the "SC-Framework"-project (https:/
 
 The analysis includes assembly, quality control, normalization, batch correction, clustering, group marker- and proportion- analysis. 
 
+A detailed collection of all results and data from WP1 can be found at:
+
+```
+/mnt/workspace_stud/stud4/stud4/Project_WP1-ATAC_Final
+```
+
 ## Data
 
 In this project, we worked with bulk ATAC-seq data. It originates from the NAPKON project, a German national research network focused on establishing data for the study of COVID-19 and related diseases.
@@ -63,7 +69,7 @@ The notebook proportion_analysis.ipynb provided us with information about how th
 
 The group_markers.ipynb notebook was essential for analyzing the genetic composition of the dataset and identifying important genes for individual clusters and genes for the different traits within a cluster. This allows conclusions to be drawn about the genome in relation to the patient's trait.
 
-### 7. Discussion
+### 7. Discussion?
 
 At the end of the workflow we discussed our results with the other WPs. Here we tried to find connections and significant differences between the different analysis methods.
 
@@ -129,6 +135,7 @@ The folder is further subdivided into the individual metadata analyzed in order 
 
 ### meta sex 
 
+### neue Metadaten ???
 
 ## Problems 
 
