@@ -1,50 +1,49 @@
-# Workpackage 3 - PeakQC
-Dieses Workpackage befasst sich mit einer Qualitätkontrollsoftware, namentlich PeakQC, die von Detleffsen et al. (2025)[^1] entwicklet wurde. Die Autoren haben die Software in dem benannten Paper auf Singlecell-ATAC-seq-Daten (scATAC-seq) getestet. ATAC-seq ist eine Methode zur Identifizierung regulatorischer Regionen im Genom durch Analyse der Chromatin-Zugänglichkeit.
+# Work Package 3 - PeakQC
 
-PeakQC nutzt die Fragmentlängenverteilung (FLD) als Qualitätsmaß. Bei ATAC-seq-Daten zeigt die FLD typischerweise ein charakteristisches periodisches Muster: einen Peak bei etwa 42 Basenpaaren (bp) für offenes Chromatin, sowie Peaks bei ~200 bp für Mononukleosomen und ~360 bp für Dinukleosomen. PeakQC verwendet ein Wavelet-basiertes Scoring, um dieses periodische Muster in den oft verrauschten Einzelzelldaten zu erkennen und zu quantifizieren.
+This work package focuses on a quality control software called PeakQC, developed by Detleffsen et al. (2025)[^1]. The authors tested and verfied the software on single-cell ATAC-seq data. PeakQC uses the Fragment Length Distribution (FLD) as a quality measure. In ATAC-seq data, the FLD typically shows a characteristic periodic pattern: a peak at approximately 42 base pairs (bp) for open chromatin, as well as peaks at ~200 bp for mononucleosomes and ~360 bp for dinucleosomes. PeakQC uses a wavelet-based scoring method to recognize and quantify this periodic pattern in often noisy single-cell data. The higher the score, the better the respective sample is.
 
 ![](./images/Fig1_Detleffsen_etal.png)
 
-Die Autoren vergleichen PeakQC mit anderen Qualitätsmetriken wie der Fragmentverhältnis-Berechnung (mNSC), dem Verhältnis von Fragmenten in Peaks (FRiP), der Transkriptionsstartstellen-Anreicherung (TSSe) und der Gesamtzahl der Fragmente (TC). PeakQC zeichnet sich aus durch
+The authors compare PeakQC with other quality metrics such as the fragment ratio calculation (mNSC), the ratio of fragments in peaks (FRiP), the transcription start site enrichment (TSSe), and the total count of fragments (TC). PeakQC stands out through:
 
-1. eine lineare Qualitätsskala, die gut mit dem periodischen Muster der FLD korreliert
-2. Filterung Zellen niedriger Qualität, während es biologisch relevante Daten bewahrt
+1. A linear quality scale that correlates well with the periodic pattern of the FLD
+2. Filtering of low-quality cells while preserving biologically relevant data
 
-Die Autoren zeigen, dass PeakQC besonders gut funktioniert, wenn es mit anderen QC Metriken wie FRiP oder TC kombiniert wird. Die besten Ergebnisse wurden mit einer Kombination aus PeakQC-Score, FRiP und TC erzielt.
+The authors show that PeakQC works particularly well when combined with other QC metrics such as FRiP or TC. According to the paper, the best results were achieved using a combination of the PeakQC score,  FRiP, and TC.
 
-Die Autoren schlagen vor, das FLD-Muster als neuen Standard für die Qualitätsbewertung von ATAC-seq-Daten zu etablieren. Aufgabe dieses Projektes ist zu schauen, inwieweit sich PeakQC auch für Bulk-Daten, wie dem NAPKON Datensatz verwenden lässt.
+The authors suggest establishing the FLD pattern as a new standard for quality assessment of ATAC-seq data. The task of this project is to examine to what extent PeakQC can also be used for bulk data, such as the NAPKON dataset.
 
-Da PeakQC somit der Qualtitäskontrolle dient und die Anwendung in diesem Projekt experimentell erfolgt, gibt es eine Schnittstelle zu WP1. WP3 erhält die vorbereiteten Daten aus dem SC-Framework[^2], genauer gesagt ein anndata Objekt, dem das FLD-Scoring und weitere deskriptive Maße wie die Anzahl an Fragmenten pro Sample und die durchschnittliche Fragmentlänge beigefügt werden. Diese ergänzten Daten erhält WP1 zurück. Das FLD-Scoring wird in der weiteren Downstreamanalyse von WP1 verwendet.
+Since PeakQC serves as quality control and the application in this project is experimental, there is an interface to WP1. WP3 receives prepared data from the SC-Framework[^2], specifically an AnnData object, to which the FLD scoring and other descriptive measures such as the number of fragments per sample and the mean fragment length are added. This augmented data is returned to WP1. The FLD scoring is used in the further downstream analysis of WP1.
 
 ![](./images/uebersicht.png)
 
-## Die PeakQC Pipeline
-### Fragmentierung der BED Dateien
-Gegeben sind 3507 BAM Dateien, die die Sequenzierergebnisse der Bulk-ATAC Analyse des NAPKON Experiments enthalten. Die Dateien sind 1-11GB groß. Diesen Dateien wird aus dem Dateinamen ein Barcode hinzugefügt und diese anschließend mit der Software sinto[^3] fragementiert. Die einzelnen Fragmentdateien wurden zu einer großen Datei zusammengefügt. (Bei Modifikation der PeakQC-Pipeline könnte auf den leztzen Schritt verzichtet werden, um Speicherplatz und Zeit zu sparen.)
+## The PeakQC Pipeline
+### Fragmentation of the BED Files
+Given are 3507 BAM files containing the sequencing results of the bulk ATAC analysis of the NAPKON experiment. The files are 1-11GB in size. A barcode is added to these files from the filename and they are subsequently fragmented using the sinto software[^3]. The individual fragment files were combined into one large file. (If the PeakQC pipeline were modified, this last step could be omitted to save storage space and time.)
 
-Dieser Schritt dauerte mehrere Tage. Im Ordner 'wp3_code/bam_sinto_bed' findet sich die Pipeline um die entsprechende Analyse durchzuführen.
+This step took several days. The pipeline for performing the corresponding analysis can be found in the folder 'wp3_code/bam_sinto_bed'.
 
-Die Pipeline ist eine Mischung aus Shell-Script und Python Funktionen. Diese wurde später komplett in Python übersetzt.
+The pipeline is a mixture of shell script and Python functions. This was later completely translated into Python.
 
-### Anwendung und Überarbeitung von PeakQC
+### Application and Revision of PeakQC
 ![](./images/peackqc_overview.png)
- Die fragmentierte BAM Dateien, werden anschließen mit der PeakQC Software für jedes Sample wie folgt zusammengefasst:
-- Es wird die Fragmentlängenverteilung erstellt.
-- Die Anzahl der Fragmente pro Sample bestimmt.
-- Die durchschnittliche Fragmentlänge berechnet.
-Die Zusammenfassung befindet sich in einem Count-Table.
+The fragmented BAM files are then summarized with the PeakQC software for each sample as follows:
+- The fragment length distribution is created.
+- The number of fragments per sample is determined.
+- The average fragment length is calculated.
+The summary is stored in a count table.
 
-Aufgrund der Dateigröße (insgesamt ~ 3TB) konnte die bestehende PeakQC-Pipeline jedoch nicht verwendet werden, da diese für SC optimiert wurde und der Arbeitsspeicher der verwendeten VMs nicht ausreichte. Deshalb wurde eine modifizierte Pipeline erstellt. Der Hauptunterschied ist, dass DuckDB[^4] mit einem Memorylimit verwendet wurde, um den Counttable zu erstellen. Diese Pipeline konnte den Count-Table (deutlich schneller) erstellen.
+Due to the file size (total ~3TB), the existing PeakQC pipeline could not be used as it was optimized for SC and the memory of the VMs used was insufficient. Therefore, a modified pipeline was created. The main difference is that DuckDB[^4] with a memory limit was used to create the count table. This pipeline could create the count table (much faster).
 
-Die vorherige Pipeline wurde zusammen mit diesem Schritt in der Funktion 'wp3_code/peakqc/peakqc/bam_sinto_bed_into_count_table.py' implementiert.
+The previous pipeline was implemented together with this step in the function 'wp3_code/PeakQC/PeakQC/bam_sinto_bed_into_count_table.py'.
 
-In der PeakQC-Pipeline wurde die add_fld_metrics Funktion angepasst, um den Count-Table verwenden zu können und die Funktion für Experimente oft laufen lassen zu können, ohne jedesmal von den BAM Files auszustarten, wie es die PeakQC-Pipeline vorsieht.
+In the PeakQC pipeline, the add_fld_metrics function was adapted to use the count table and to be able to run the function often for experiments without starting from the BAM files each time, as provided by the PeakQC pipeline.
 
-Die PeakQC-Pipeline erstellt verschiedene Plots zu den Daten. Ein wichtiger Plot ist der DensityPlot der Anzahl der Fragmentlängen pro Sample. Dieser konnte für die Bulk-Daten nicht erstellt werden, da die Implementation zu Arbeitspeicherintensiv war für die hohen Anzahlen an Fragmentlängen pro Sample. 
+The PeakQC pipeline creates various plots of the data. An important plot is the density plot of the number of fragment lengths per sample. This could not be created for the bulk data because the implementation was too memory-intensive for the high numbers of fragment lengths per sample. In addition, the plots was not very informative due to the extreme outliers the data inherits.
 
-Die nachsthehende beschreibende Statistik zeigt das Problem ganz gut auf: Die Range ist enorm und die Verteilung stark asymetrisch. So beträgt zum Beispiel das 99 Perzentile, 99 und das 99.99 Percentile 892,461 und das 100 Perzentile. Das 50% Perzentile liegt bei 1786. Diese enormen sind Ausreißer sind auf relativ wenige Samples (~33) zurückzuführen und stammen in der Regel von kurzen Fragmentlängen von kleiner 30bp.
+The following descriptive statistics illustrate the problem well: The range is enormous and the distribution highly asymmetric. For example, the 99th percentile is 99 and the 99.99 percentile is 892,461, and the 100th percentile. The 50% percentile is at 1786. These enormous outliers are attributable to relatively few samples (~33) and usually come from short fragment lengths of less than 30bp.
 
-Deskriptive Statistik der Fragmentlängenverteilungen:
+Descriptive statistics of the fragment length distributions:
 - Mean: 19,670.0
 - Median: 1,786.0
 - Standard deviation: 51,351.0
@@ -53,7 +52,7 @@ Deskriptive Statistik der Fragmentlängenverteilungen:
 - Non-zero values: 3,445,731 (98.2%)
 - Distribution: (3,507 x 1,001)
 
-Deskriptive Statistik der Gesamtzahl an Fragmenten (pro Sample):
+Descriptive statistics of the total number of fragments (per sample):
 - Mean: 21,216,737.18
 - Median: 19,173,886.00
 - Standard Deviation: 14,667,782.56
@@ -65,27 +64,28 @@ Deskriptive Statistik der Gesamtzahl an Fragmenten (pro Sample):
 - 99th Percentile: 67,249,932.12
 - 99.99th Percentile: 242,744,219.32
 
+The pipeline was adjusted accordingly. In addition, attempts were made to censor the extremes in the upper percentiles. This achieved relative computational efficiency but still no meaningful density plots. Therefore, a Monte Carlo multinomial downsampling was used: All samples with a number of fragments higher than 10,000 are downsampled to exactly these 10,000 observations. The relative frequencies of the number of fragment lengths in the fragment length distribution are taken as probabilities from which M (= 100) different distributions are drawn and the mean per sample is calculated.
 
-Die Pipeline wurde entsprechend angepasst. Außerdem wurde versucht, die Extreme in den oberen Percentilen zu zensieren. Dies erwirkte relative recheneffizienz, jedoch noch keine aussagekräftigen Dichteplots. Deshalb wurde auf ein Monte Carlo Multinomial Downsampling zurückgeriffen: Alle Samples mit einer Anzahl an Fragmenten höher als 10.000 werden auf eben diese 10.000 Beobachtungen heruntergesampled. Die relativen Häufigkeiten der Anzahl der Fragmentenlängen in der Fragmentlängenverteilung werden dabei als Wahrscheinlichkeiten genommen von der M (= 100) verschiedene Verteilungen gezogen und der Mittelwert pro Sample berechnet.
+This makes the plotting meaningful and efficient. Moreover, it somewhat breaks the positive correlation between the number of fragments and the height of the FLD score, if the sample_size is chosen small enough. A sample_size of 10,000 was chosen as this regularly corresponds to the number of fragments in the SC. This is below the median of about 20,000.
 
-Dies macht das Plotting aussagekräftig und effizient. Außerdem wird damit die positive Korrelation zwischen Anzahl an Fragmenten und höhe des FLD-Scores etwas aufgebrochen, wenn die sample_size kleingenug gewählt wird. Es wurde eine sample_size von 10,000 gewählt, da dies regelmäßig der Anzahl an Fragmenten im SC entspricht. Diese liegt unter dem Median von etwa 20,000.
+The following figure shows the density plot. The following figure shows the density plot. The density plot depicts the expected periodic pattern of the fragment length distribution, with distinct peaks indicating nucleosome-free regions, mononucleosomes, and dinucleosomes.
 
-Die nachstehende Abbildung zeigt den Densityplot.
+
 ![](./images/density.png)
 
-Außerdem ist die Verteilung der FLD-Scores gezeigt:
+The distribution of FLD scores is shown in the next plot. This distribution looks very similar to the shape of score for sc-ATAC seq data.
 ![](./images/overview.png)
 
-Es ist wichtig zu betonen, dass die FLD-Scores nicht zwischen den verschiedenen Samples verglichen werden kann. Diese Limitation wird etwas durch das Downsampling etwas aufgebrochen.
+It is important to emphasize that the FLD scores cannot be compared between different samples. This limitation is somewhat mitigated by downsampling.
 
-Nicht produktionsreif, da derzeit noch zu arbeitsspeicherintensiv ist die Plottingfunktion der Perzentile der FLD-Scores. Das könnte dann so aussehen und bei der Auswahl eines Schwellenwertes für WP1 helfen:
+Not yet production-ready, as it is currently still too memory-intensive, is the plotting function of the percentiles of the FLD scores. This could look like the following and help WP1 in selecting the threshold values to filter samples with low quality. The multi density plot shows that the expected pattern becomes more distinct for higher FLD scores. Additionally, the plots underline the metrics ability to differeniciate between samples of low and and good qualitity.
 ![](./images/_multi_density.png)
 
-Außerdem wurde ein Scatterplot sowie die nachstehenden Statistiken bereitgestellt, um WP1 die Schwellenwertwahl zu erleichtern.
+In addition, a scatter plot and the following statistics were provided to make threshold selection easier for WP1.
 
 ![](./images/mean_score_n_fragments_quantile_colouring.png)
 
-FLD-Score Perzentile:
+FLD-Score Percentiles:
 - 10th percentile: 1877.701918
 - 20th percentile: 2675.414017
 - 30th percentile: 3014.333702
@@ -97,42 +97,103 @@ FLD-Score Perzentile:
 - 90th percentile: 4235.033384
 - 100th percentile: 5341.552203
 
+The calculated FLD scores and other metrics and graphics were made available to WP1.
 
-Die ermittelten FLD-Scores sowie andere Metriken und Graphiken wurden WP1 zur Verfügung gestellt.
-### Weitere Änderungsvorschläge für PeakQC Pipeline
-- Umwandlung der Anzahl an Fragmentlängenverteilung in relative Häufigkeiten:
-    Dies könnte implementiert werden und Anwendung finden, wenn die Range der Fragmentlängenanzahl für die BP von 1...1000 nicht zu groß ist. Dies bricht ähnlich wie das Downsampling die Korrelation zwischen Anzahl der Fragmentlängen auf - ist jedoch deutlich schneller berechnet.
-- Entfernen des Peak Thresholds:
-    Die Peak-Thresholdauswahl müsste theoretisch für jedes Sample individuel ausgewählt werden und würde letztendlich in der Regel nur die letzten Peaks >360bp von dem Scoring ausschließen. Diese fallen ohnehin kaum ins Gewicht. (Dies wurde überprüft indem die Gewichtungen nur für die ersten drei Peaks berechnet wurden.)
-- Arbeitsspeicherfreundliche Implementation der perzentilweisen Darstellung der Fragmentlängenverteilungen:
-    Dieser Plot könnte bei der Schwellenwertauswahl helfen und weitere Einblicke bieten und damit hilfreich in der Anwendung sein, da die Schwellenwertauswahl eher Qualitativ erfolgt.
-- Keine Zusammenfassung der Fragment-Dateien in einem gemeinsamen BAM-File für große Datensätze:
-    Gegenvorschläge umfassen das weglassen oder die Erstellung einer DuckDB-Database beim Zusammenfassen der Daten zu einem Count-Table (Vorschläge dafür finden sich in peakqc.insertsize.py oder bam_sinto_bed_into_count_table.py)
+### Further Suggested Changes for the PeakQC Pipeline
+- Conversion of the number of fragment length distributions to relative frequencies:
+    This could be implemented and applied if the range of fragment length counts for BP from 1...1000 is not too large. Similar to downsampling, this breaks the correlation between the number of fragment lengths - but is calculated much faster.
+- Removing the Peak Threshold:
+    The peak threshold selection would theoretically have to be selected individually for each sample and would ultimately usually only exclude the last peaks >360bp from the scoring. These hardly matter anyway. (This was verified by calculating the weights only for the first three peaks.)
+- Memory-friendly implementation of the percentile-wise representation of fragment length distributions:
+    This plot could help with threshold selection and offer further insights, thus being helpful in application, as threshold selection tends to be more qualitative.
+- No aggregation of fragment files into a common BAM file for large datasets:
+    Counter-proposals include omitting this step or creating a DuckDB database when combining the data into a count table (suggestions for this can be found in PeakQC.insertsize.py or bam_sinto_bed_into_count_table.py)
 
-## Vergleich des FLD-Scoring mit anderen Metriken
-WP1 war so freundlich uns die nachstehenden PCAs und UMAPs zu erzeugen. Außerdem wurde Coehn's Kappa berechnet, um zu schauen, wie unterschiedlich sich die KO-Kriterien der verschiedenen Metriken auswirken.
-
-### Cohen's Kappa:
-Um die Filtereffekte der verschiedenen Metriken zu untersuchen, wurden die Samples basierend auf den - von WP2 ermittelten - Schwellenwerten gefiltert und die binäre Klassifikation "gefiltert vs. nicht gefiltert" mit Cohen's Kappa verglichen.
-
-Die berechneten Cohen's Kappa Werte zeigen das Maß der Übereinstimmung zwischen verschiedenen binär klassifizierten Metriken unter Berücksichtigung von Zufall. Höhere Kappa-Werte (> 0.2) weisen auf eine moderate Übereinstimmung hin[^5], z. B. zwischen "atac fraction of reads in peaks (frip)" und "fold_change_promoters_fragments" (0.314). Dies deutet darauf hin, dass diese beiden Metriken ähnliche Filtereffekte haben. Dies gilt auch für "fld_score_wp3" und "n_fragments_wp3". D. h. ganz hat das Downsampling den Zusammenhang zwischen den beiden Metriken nicht aufgehoben.
-
-Niedrige oder nahe 0 liegende Werte deuten auf eine geringe oder zufällige Übereinstimmung hin. Beispielsweise zeigt die Kombination "fld_score_wp3" und "mean_fragment_size_wp3" mit 0.009 kaum eine Korrelation. Negative Werte (z. B. "n_fragments_wp3" und "fold_change_promoters_fragments": -0.056) können auf eine leichte Tendenz zur gegenteiligen Klassifikation hinweisen.
-
-![](./images/CoehensKappa.png)
+## Comparison of FLD Scoring with Other Metrics
+WP1 generated the following PCAs and UMAPs for us. In addition, Cohen's Kappa was calculated to see how differently the KO criteria of the various metrics affect the data and filtering process.
 
 ![](./images/qc_standards.png)
 
-!!!!!!!Welche abgedeckt, stärken schwächen im Vergliech zu PeakQC!!!!!!
+First, the respective metrics are briefly explained.
+
+The **PeakQC Score** (fld_score_wp3) evaluates the periodicity of the fragment length distribution (FLD). According to Detleffsen et al. (2025), "PeakQC utilizes a wavelet based convolution of the FLD to denoise the signal which can subsequently be validated based on the expected periodical pattern."[^1] A high PeakQC value indicates that the Tn5 transposase has optimally bound to accessible chromatin regions, creating the characteristic pattern of fragment lengths attributable to mono-, di-, and tri-nucleosomes. This metric was originally developed for SC-ATAC-seq and is particularly reliable in this context as an indicator of the technical quality of the ATAC-seq library but seems to work well for Bulk ATAC-seq data too.
+
+The **Fragment Count** (n_fragments_wp3) indicates the total number of unique DNA fragments in the sample. As noted in the paper, "library complexity, determined by total number of unique fragments"[^1] is one of the standard quality control aspects. Sufficient fragment count is fundamental for representative genome coverage and directly influences the sensitivity of the analysis.
+
+The **Mean Fragment Size** (mean_fragment_size_wp3) provides information about the average length of the sequenced fragments. Extreme deviations may indicate DNA degradation, excessive PCR amplification, or other technical problems.
+
+The **Fraction of Reads in Peaks** (atac fraction of reads in peaks, FRiP) measures the proportion of sequencing reads that fall within identified peaks. According to the PeakQC paper, this is part of "enrichment of open chromatin signals at certain regions/peaks visible in the signal to noise ratio"[^1]. This metric is an important indicator of the signal-to-noise ratio: a high FRiP value indicates specific binding of the Tn5 transposase to accessible chromatin.
+
+The **Fold Change Promoters Fragments** metric evaluates the enrichment of fragments in promoter regions compared to the background. It provides insight into the biological relevance of the captured signals, as promoters typically represent accessible chromatin regions.
+
+The following tables show how many samples pass each filter.
+
+| Metric | Passing Cells | Percentage | Threshold |
+|--------|---------------|------------|-----------|
+| mean_fragment_size_wp3 | 3,503 | 99.89% | 50 - 290 |
+| n_fragments_wp3 | 3,280 | 93.53% | 3,000,000 - 60,000,000 |
+| fold_change_promoters_fragments | 3,277 | 93.44% | 0.03 - 0.12 |
+| atac fraction of reads in peaks (frip) | 2,884 | 82.24% | 0.0125 - 0.15 |
+| fld_score_wp3 | 2,795 | 79.70% | 2,675 - 4,900 |
+
+| Combined Metrics | Passing Cells | Percentage |
+|------------------|---------------|------------|
+| Fragment Count + FRiP | 2,697 | 77.00% |
+| PeakQC + FRiP | 2,422 | 69.00% |
+| PeakQC + Fragment Count + FRiP | 2,353 | 67.00% |
+
+| Multiple Metrics | Passing Cells | Percentage |
+|------------------|---------------|------------|
+| Passing all 5 metrics | 2,292 | 65.00% |
+| Passing at least 4 metrics | 3,014 | 86.00% |
+| Passing at least 3 metrics | 3,422 | 98.00% |
+
+### Cohen's Kappa:
+To investigate the filtering effects of the different metrics, the samples were filtered based on the thresholds determined by WP1, and the binary classification "filtered vs. not filtered" was compared using Cohen's Kappa.
+
+The calculated Cohen's Kappa values show the degree of agreement between different binary classified metrics, taking into account chance. Higher Kappa values (> 0.2) indicate moderate agreement[^5], e.g., between "atac fraction of reads in peaks (frip)" and "fold_change_promoters_fragments" (0.314). This suggests that these two metrics have similar filtering effects. This also applies to "fld_score_wp3" and "n_fragments_wp3". That is, the downsampling has not completely removed the relationship between the two metrics.
+
+Low or near-zero values indicate low or random agreement. For example, the combination "fld_score_wp3" and "mean_fragment_size_wp3" with 0.009 shows hardly any correlation. Negative values (e.g., "n_fragments_wp3" and "fold_change_promoters_fragments": -0.056) may indicate a slight tendency toward opposite classification.
+
+![](./images/CoehensKappa.png)
+
+The analysis of the 3,507 samples in this bulk ATAC-seq dataset shows interesting patterns in the quality distribution. First, it is noticeable that the mean fragment size with 99.89% is the least selective metric – almost all samples fall within the defined range of 50-290 base pairs. This suggests that fragmentation during library preparation was consistent and there were few qualitative differences between samples.
+
+The fragment count and fold change promoters metrics show similar pass rates of about 93%, indicating good general coverage and enrichment in regulatory regions. The FRiP value with 82.24% and the PeakQC score with 79.70% of the samples are somewhat more selective. These metrics specifically filter out samples with poor signal-to-noise ratio or indistinct nucleosomal patterns.
+
+Remarkably, 65% of all samples meet all five quality criteria. 98% of the samples pass at least three metrics, while only three samples meet just one criterion.
+
+The combination of multiple metrics enhances quality filtering. The combination of fragment count and FRiP retains 77% of the samples, while PeakQC and FRiP together select 69%. The strictest filter combination – PeakQC, fragment count, and FRiP – leads to the most selective choice at 67%.
+
+## Suitability of the PeakQC Score for Bulk ATAC-seq
+
+The PeakQC score, originally conceived for the quality assessment of SC-ATAC-seq data and adapted for bulk data analysis, shows particularly high suitability for the present bulk dataset. In bulk ATAC-seq, the nucleosomal patterns in the fragment length distribution are typically more pronounced than in single-cell analyses, as the data comes from a larger cell population and is not affected by the sparsity of individual cells.
+
+The results confirm this expectation: With a selective pass rate of 79.70%, the PeakQC score effectively identifies samples with clear periodic patterns in the fragment length distribution, indicating optimal Tn5 transposase activity. The moderate agreement with other established quality metrics such as FRiP (κ=0.2283) and fragment count (κ=0.2005) further emphasizes that the PeakQC score captures complementary quality aspects that are not fully covered by other metrics.
+
+The combination of the PeakQC score with the FRiP value proves particularly effective. This combination unites the assessment of fragment length periodicity with the signal-to-noise ratio, thus providing comprehensive quality control that considers both technical and biological aspects of the ATAC-seq data. With a combined pass rate of 69%, this combination represents a good compromise between stringent quality filtering and sufficient data retention.
+
+The high effectiveness of the PeakQC score in this bulk dataset confirms that this metric maintains its original strength in the analysis of bulk ATAC-seq data and makes a valuable contribution to quality control. In the context of bulk analyses, the PeakQC score benefits from the more robust signals and more distinct nucleosomal patterns, leading to reliable identification of high-quality samples.
+
+Overall, the results show that the PeakQC score, in combination with other quality metrics, is an effective tool for comprehensive quality assessment of bulk ATAC-seq data and contributes to the identification of high-quality datasets for subsequent analyses. This would confirm the conclusion about the good suitability of PeakQC from [11] also for bulk data.
+
+Below is another figure with PCA and UMAP representations of the data:
 
 ![](./images/ScoreUmapsWP3.png)
 
-Auf die Auswahl und Anwendung der Metriken für die Clusterbildung wird jedoch mehr von WP1 eingegangen.
+The visualization of the ATAC-seq data shows the different influence of the three central quality metrics on the data structure (selected based on the aforementioned assesment). The fragment count (n_fragments_wp3), shown in the first row, displays a relatively homogeneous distribution with uniformly violet coloration and only a few lighter outliers. This low level of structuring corresponds to the high pass rate of 93.53% and suggests that this metric primarily captures technical quality aspects that correlate little with biological variability.
 
-!!!!!!!!!!!!!!INTERPREATION!!!!!!!!!!!!!!!!!!!!!!!
+The FRiP value (Fraction of Reads in Peaks) in the second row already shows a more distinct pattern. The enrichment of higher values in the right area of the PCA plots and local clusters in the UMAP representations show that the FRiP value correlates with both technical and biological factors. This more heterogeneous distribution corresponds to the medium selectivity of the FRiP value with a pass rate of 82.24%.
 
+The structuring is most pronounced for the FLD score (PeakQC) in the third row. The strong color variance from dark blue to light green/yellow and the clear correlation with both principal components underline the high biological relevance of this metric. In the UMAP representation, clear clusters structured according to FLD score form, which become even more distinct after Harmony correction. This might explain why the FLD score at 79.70% is the most selective single metric.
 
-[^1]: https://www.biorxiv.org/lookup/doi/10.1101/2025.02.20.639146}
+Particularly insightful is the comparison between uncorrected and harmonized data. While the Harmony correction hardly changes the fragment count distribution, it significantly enhances the separation of the FLD score-based clusters. This confirms that the FLD score captures biologically relevant signals that become more visible through the removal of technical variations. The higher LISI scores in the harmonized data also underline the successful integration through the Harmony correction.
+
+The visualization thus confirms the results of the statistical analysis: The three metrics capture complementary quality aspects with different biological relevance. This explains why combinations of these metrics, especially PeakQC + FRiP, are particularly effective for comprehensive quality filtering that considers both technical and biological aspects.
+
+However, the selection and application of the metrics for cluster formation are addressed more by WP1.
+
+[^1]: https://www.biorxiv.org/lookup/doi/10.1101/2025.02.20.639146
 [^2]: https://github.com/loosolab/SC-Framework
 [^3]: https://timoast.github.io/sinto/basic_usage.html
 [^4]: https://duckdb.org/docs/stable/clients/python/overview.html
